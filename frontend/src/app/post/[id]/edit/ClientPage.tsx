@@ -37,8 +37,9 @@ const writeFormSchema = z.object({
     .min(1, "내용을 입력해주세요.")
     .min(2, "내용은 2자 이상이어야 합니다.")
     .max(10_000_000, "내용은 1,000만자 이하여야 합니다."),
-  published: z.boolean().optional(),
-  listed: z.boolean().optional(),
+  published: z.boolean(),
+  listed: z.boolean(),
+  attachment_1: z.instanceof(File).optional(),
 });
 
 type WriteFormInputs = z.infer<typeof writeFormSchema>;
@@ -62,33 +63,69 @@ export default function ClientPage({
   });
 
   const onSubmit = async (data: WriteFormInputs) => {
-    const response = await client.PUT("/api/v1/posts/{id}", {
-      params: {
-        path: {
-          id: post.id,
+    try {
+      // 게시글 수정 요청
+      const response = await client.PUT("/api/v1/posts/{id}", {
+        params: {
+          path: {
+            id: post.id,
+          },
         },
-      },
-      body: {
-        title: data.title,
-        content: data.content,
-        published: data.published,
-        listed: data.listed,
-      },
-    });
+        body: {
+          title: data.title,
+          content: data.content,
+          published: data.published,
+          listed: data.listed,
+        },
+      });
 
-    if (response.error) {
+      if (response.error) {
+        toast({
+          title: response.error.msg,
+          variant: "destructive",
+        });
+        return;
+      }
+
+      // 파일 업로드 처리
+      if (data.attachment_1) {
+        const formData = new FormData();
+        formData.append("file", data.attachment_1);
+
+        const uploadResponse = await client.POST(
+          "/api/v1/posts/{postId}/genFiles/{typeCode}",
+          {
+            params: {
+              path: {
+                postId: post.id,
+                typeCode: "attachment",
+              },
+            },
+            body: formData,
+          },
+        );
+
+        if (uploadResponse.error) {
+          toast({
+            title: uploadResponse.error.msg,
+            variant: "destructive",
+          });
+          return;
+        }
+      }
+
       toast({
-        title: response.error.msg,
+        title: response.data.msg,
+      });
+
+      router.replace("/post/list");
+    } catch (error) {
+      console.error("Error updating post:", error);
+      toast({
+        title: "글 수정 중 오류가 발생했습니다.",
         variant: "destructive",
       });
-      return;
     }
-
-    toast({
-      title: response.data.msg,
-    });
-
-    router.replace("/post/list");
   };
 
   return (
@@ -142,6 +179,27 @@ export default function ClientPage({
             </label>
             <Badge variant="outline">작성자 : {post.authorName}</Badge>
           </div>
+          <FormField
+            control={form.control}
+            name="attachment_1"
+            render={({ field: { onChange, ...field } }) => (
+              <FormItem>
+                <FormLabel>첨부파일</FormLabel>
+                <FormControl>
+                  <Input
+                    type="file"
+                    onChange={(e) => {
+                      const file = e.target.files?.[0];
+                      onChange(file);
+                    }}
+                    {...field}
+                    value={undefined}
+                  />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
           <FormField
             control={form.control}
             name="content"
