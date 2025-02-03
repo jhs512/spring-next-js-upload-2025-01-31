@@ -23,7 +23,7 @@ export default function LoginButton({
   text?: string | boolean;
   icon?: React.ReactNode;
 }) {
-  const socialLoginForKakaoUrl = `http://localhost:8080/oauth2/authorization/kakao`;
+  const socialLoginForKakaoUrl = `http://localhost:8080/oauth2/authorization/naver`;
   const redirectUrlAfterSocialLogin = "http://localhost:3000";
   if (!variant) variant = "link";
   if (typeof text === "boolean") text = "로그인";

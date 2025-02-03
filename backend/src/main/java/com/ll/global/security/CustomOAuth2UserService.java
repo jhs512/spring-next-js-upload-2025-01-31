@@ -23,18 +23,34 @@ public class CustomOAuth2UserService extends DefaultOAuth2UserService {
     public OAuth2User loadUser(OAuth2UserRequest userRequest) {
         OAuth2User oAuth2User = super.loadUser(userRequest);
 
-        String oauthId = oAuth2User.getName();
         String providerTypeCode = userRequest
                 .getClientRegistration()
                 .getRegistrationId()
                 .toUpperCase(Locale.getDefault());
 
-        Map<String, Object> attributes = oAuth2User.getAttributes();
-        Map<String, String> attributesProperties = (Map<String, String>) attributes.get("properties");
+        String oauthId = switch (providerTypeCode) {
+            case "NAVER" -> ((Map<String, String>) oAuth2User.getAttributes().get("response")).get("id");
+            default -> oAuth2User.getName();
+        };
 
-        String nickname = attributesProperties.get("nickname");
-        String profileImgUrl = attributesProperties.get("profile_image");
+        Map<String, Object> attributes = oAuth2User.getAttributes();
+
         String username = providerTypeCode + "__" + oauthId;
+        String nickname = null;
+        String profileImgUrl = null;
+
+        switch ( providerTypeCode ) {
+            case "NAVER" -> {
+                Map<String, String> attributesProperties = (Map<String, String>) attributes.get("response");
+                nickname = attributesProperties.get("nickname");
+                profileImgUrl = attributesProperties.get("profile_image");
+            }
+            default -> {
+                Map<String, String> attributesProperties = (Map<String, String>) attributes.get("properties");
+                nickname = attributesProperties.get("nickname");
+                profileImgUrl = attributesProperties.get("profile_image");
+            }
+        }
 
         Member member = memberService.modifyOrJoin(username, nickname, profileImgUrl);
 

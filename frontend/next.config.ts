@@ -16,6 +16,10 @@ const nextConfig: NextConfig = {
         protocol: "https",
         hostname: "placehold.co",
       },
+      {
+        protocol: "https",
+        hostname: "phinf.pstatic.net",
+      },
     ],
     contentSecurityPolicy: "default-src 'self'; img-src 'self' data: https:;",
   },
