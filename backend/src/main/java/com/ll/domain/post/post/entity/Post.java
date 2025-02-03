@@ -2,10 +2,12 @@ package com.ll.domain.post.post.entity;
 
 import com.ll.domain.member.member.entity.Member;
 import com.ll.domain.post.comment.entity.PostComment;
+import com.ll.domain.post.genFile.entity.PostGenFile;
 import com.ll.global.exceptions.ServiceException;
 import com.ll.global.jpa.entity.BaseTime;
 import com.ll.global.rsData.RsData;
 import com.ll.standard.base.Empty;
+import com.ll.standard.util.Ut;
 import jakarta.persistence.*;
 import lombok.*;
 
@@ -32,6 +34,10 @@ public class Post extends BaseTime {
     @OneToMany(mappedBy = "post", cascade = {CascadeType.PERSIST, CascadeType.REMOVE}, orphanRemoval = true)
     @Builder.Default
     private List<PostComment> comments = new ArrayList<>();
+
+    @OneToMany(mappedBy = "post", cascade = {CascadeType.PERSIST, CascadeType.REMOVE}, orphanRemoval = true)
+    @Builder.Default
+    private List<PostGenFile> genFiles = new ArrayList<>();
 
     private boolean published;
 
@@ -63,6 +69,21 @@ public class Post extends BaseTime {
         comments.remove(postComment);
     }
 
+    public PostGenFile addGenFile(String typeCode, String filePath) {
+        String originFileName = Ut.file.getOriginFileName(filePath);
+        int fileNo = genFiles
+                .stream()
+                .filter(genFile -> genFile.getTypeCode().equals(typeCode))
+                .map(PostGenFile::getFileNo)
+                .max(Integer::compareTo)
+                .orElse(0) + 1;
+
+        PostGenFile postGenFile = new PostGenFile(this, typeCode, fileNo, originFileName, filePath);
+
+        genFiles.add(postGenFile);
+
+        return postGenFile;
+    }
 
     public RsData<Empty> getCheckActorCanDeleteRs(Member actor) {
         if (actor == null) return new RsData<>("401-1", "로그인 후 이용해주세요.");
@@ -122,5 +143,23 @@ public class Post extends BaseTime {
                 .ifPresent(rsData -> {
                     throw new ServiceException(rsData.getResultCode(), rsData.getMsg());
                 });
+    }
+
+    public void checkActorCanUploadGenFile(Member actor) {
+        Optional.of(
+                        getActorCanUploadGenFileRs(actor)
+                )
+                .filter(RsData::isFail)
+                .ifPresent(rsData -> {
+                    throw new ServiceException(rsData.getResultCode(), rsData.getMsg());
+                });
+    }
+
+    private RsData<Empty> getActorCanUploadGenFileRs(Member actor) {
+        if (actor == null) return new RsData<>("401-1", "로그인 후 이용해주세요.");
+
+        if (actor.equals(author)) return RsData.OK;
+
+        return new RsData<>("403-1", "작성자만 파일을 업로드할 수 있습니다.");
     }
 }

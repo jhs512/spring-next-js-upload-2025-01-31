@@ -33,11 +33,19 @@ public class AppConfig {
         AppConfig.siteFrontUrl = siteFrontUrl;
     }
 
-    public static boolean isNotProd() {
-        return true;
+    @Getter
+    public static String genFileDirPath;
+
+    @Value("${custom.genFile.dirPath}")
+    public void setGenFileDirPath(String genFileDirPath) {
+        this.genFileDirPath = genFileDirPath;
     }
 
     public static String getTempDirPath() {
         return System.getProperty("java.io.tmpdir");
+    }
+
+    public static boolean isNotProd() {
+        return true;
     }
 }

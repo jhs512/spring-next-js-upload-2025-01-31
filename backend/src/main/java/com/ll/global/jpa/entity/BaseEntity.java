@@ -19,4 +19,9 @@ public class BaseEntity {
     @Setter(AccessLevel.PROTECTED)
     @EqualsAndHashCode.Include
     private Long id;
+
+    public String getModelName() {
+        String simpleName = this.getClass().getSimpleName();
+        return Character.toLowerCase(simpleName.charAt(0)) + simpleName.substring(1);
+    }
 }

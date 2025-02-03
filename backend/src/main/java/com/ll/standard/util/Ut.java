@@ -5,8 +5,10 @@ import com.ll.global.app.AppConfig;
 import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.security.Keys;
 import lombok.SneakyThrows;
+import org.springframework.web.multipart.MultipartFile;
 
 import javax.crypto.SecretKey;
+import java.io.File;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.net.http.HttpClient;
@@ -14,11 +16,10 @@ import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.nio.file.StandardCopyOption;
-import java.util.Date;
-import java.util.LinkedHashMap;
-import java.util.Map;
-import java.util.UUID;
+import java.text.SimpleDateFormat;
+import java.util.*;
 import java.util.concurrent.TimeUnit;
 
 public class Ut {
@@ -87,6 +88,8 @@ public class Ut {
     }
 
     public static class file {
+        private static final String ORIGIN_FILE_NAME_SEPARATOR = "--originFileName_";
+
         private static final Map<String, String> MIME_TYPE_MAP = new LinkedHashMap<>() {{
             put("application/json", "json");
             put("text/plain", "txt");
@@ -158,7 +161,9 @@ public class Ut {
         }
 
         @SneakyThrows
-        private static void mv(String oldFilePath, String newFilePath) {
+        public static void mv(String oldFilePath, String newFilePath) {
+            mkdir(Paths.get(newFilePath).getParent().toString());
+
             Files.move(
                     Path.of(oldFilePath),
                     Path.of(newFilePath),
@@ -200,7 +205,60 @@ public class Ut {
         public static void delete(String filePath) {
             Files.deleteIfExists(Path.of(filePath));
         }
+
+        @SneakyThrows
+        public static String toFile(MultipartFile multipartFile, String dirPath) {
+            if (multipartFile == null) return "";
+            if (multipartFile.isEmpty()) return "";
+
+            String filePath = dirPath + "/" + UUID.randomUUID() + ORIGIN_FILE_NAME_SEPARATOR + multipartFile.getOriginalFilename();
+
+            System.out.println("filePath = " + filePath);
+
+            Ut.file.mkdir(dirPath);
+            multipartFile.transferTo(new File(filePath));
+
+            return filePath;
+        }
+
+        public static String getOriginFileName(String file) {
+            if (file.contains(ORIGIN_FILE_NAME_SEPARATOR)) {
+                String[] fileInfos = file.split(ORIGIN_FILE_NAME_SEPARATOR);
+                return fileInfos[fileInfos.length - 1];
+            }
+
+            return Paths.get(file).getFileName().toString();
+        }
+
+        public static String getFileExtTypeCodeFromFileExt(String ext) {
+            return switch (ext) {
+                case "jpeg", "jpg", "gif", "png" -> "img";
+                case "mp4", "avi", "mov" -> "video";
+                case "mp3" -> "audio";
+                default -> "etc";
+            };
+        }
+
+        public static String getFileExtType2CodeFromFileExt(String ext) {
+            return switch (ext) {
+                case "jpeg", "jpg" -> "jpg";
+                case "gif", "png", "mp4", "mov", "avi", "mp3" -> ext;
+                default -> "etc";
+            };
+        }
+
+        public static String getExt(String filename) {
+            return Optional.ofNullable(filename)
+                    .filter(f -> f.contains("."))
+                    .map(f -> f.substring(filename.lastIndexOf(".") + 1).toLowerCase())
+                    .orElse("");
+        }
+
+        public static String getDirName(String filePath) {
+            return Paths.get(filePath).getParent().getFileName().toString();
+        }
     }
+
 
     public static class cmd {
         public static void runAsync(String cmd) {
@@ -215,6 +273,14 @@ public class Ut {
             } catch (Exception e) {
                 e.printStackTrace();
             }
+        }
+    }
+
+
+    public static class date {
+        public static String getCurrentDateFormatted(String pattern) {
+            SimpleDateFormat simpleDateFormat = new SimpleDateFormat(pattern);
+            return simpleDateFormat.format(new Date());
         }
     }
 }
