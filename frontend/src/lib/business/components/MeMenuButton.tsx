@@ -29,6 +29,7 @@ export default function MeMenuButton() {
             width={32}
             height={32}
             quality={100}
+            objectFit="cover"
           />
         </Button>
       </DropdownMenuTrigger>

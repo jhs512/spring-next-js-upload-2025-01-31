@@ -70,3 +70,13 @@ body {
     @apply bg-background text-foreground;
   }
 }
+
+html > body .toastui-editor-contents {
+  font-family: var(--font-pretendard);
+  font-size: 1rem;
+}
+
+html > body .toastui-editor-contents code {
+  font-family: inherit;
+  font-size: inherit;
+}

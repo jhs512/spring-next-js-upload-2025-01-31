@@ -7,6 +7,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 
 import { components } from "@/lib/backend/apiV1/schema";
+import { cn } from "@/lib/utils";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -32,7 +33,7 @@ import {
 
 import { ListX, Lock, Search, X } from "lucide-react";
 
-import { getDateHr } from "../utils";
+import { getDateHr, getMetadataAttrValueAsNumberFromQueryStr } from "../utils";
 import PaginationType1Responsive from "./PaginationType1Responsive";
 
 interface PostListProps {
@@ -247,13 +248,33 @@ export default function PostList({
                     </CardTitle>
                   </CardHeader>
                   <CardContent>
-                    <div className="flex items-center space-x-4">
+                    <div>
+                      <Image
+                        src={item.thumbnailImgUrl}
+                        alt={item.title}
+                        width={400}
+                        height={400}
+                        className={cn(
+                          "rounded-md aspect-square w-full",
+                          getMetadataAttrValueAsNumberFromQueryStr(
+                            item.thumbnailImgUrl,
+                            "darkInvertable",
+                            0,
+                          ) === 1 && "dark:invert",
+                        )}
+                        quality={100}
+                        objectFit="cover"
+                      />
+                    </div>
+                    <div className="flex items-center space-x-4 mt-4">
                       <div className="flex-shrink-0">
                         <Image
                           src={item.authorProfileImgUrl}
                           alt={item.authorName}
                           width={40}
                           height={40}
+                          quality={100}
+                          objectFit="cover"
                           className="rounded-full ring-2 ring-primary/10"
                         />
                       </div>

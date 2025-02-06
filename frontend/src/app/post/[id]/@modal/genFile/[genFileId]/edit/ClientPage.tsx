@@ -9,7 +9,7 @@ import { useRouter } from "next/navigation";
 import client from "@/lib/backend/client";
 
 import { components } from "@/lib/backend/apiV1/schema";
-import { getFileSizeHr } from "@/lib/business/utils";
+import { getFileSizeHr, getUplodableInputAccept } from "@/lib/business/utils";
 
 import { Button } from "@/components/ui/button";
 import {
@@ -132,6 +132,7 @@ export default function ClientPage({
                   <FormControl>
                     <Input
                       type="file"
+                      accept={getUplodableInputAccept()}
                       onChange={(e) => {
                         const file = e.target.files?.[0];
                         if (file) onChange(file);

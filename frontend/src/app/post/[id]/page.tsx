@@ -4,6 +4,8 @@ import { cookies } from "next/headers";
 
 import client from "@/lib/backend/client";
 
+import { stripMarkdown } from "@/lib/business/utils";
+
 import ClientPage from "./ClientPage";
 
 async function getPost(id: string) {
@@ -19,23 +21,6 @@ async function getPost(id: string) {
   });
 
   return res;
-}
-
-function processMarkdown(input: string) {
-  // 1. $$...$$ 또는 ```...``` 내용을 제거
-  const cleanedContent = input.replace(
-    /(\$\$[\s\S]*?\$\$|```[\s\S]*?```)/g,
-    "",
-  );
-
-  // 2. 영어, 소괄호, 한글(자음/모음 포함), 띄워쓰기, 줄바꿈 외의 모든 문자 제거
-  // 3. 연속된 공백과 줄바꿈을 하나의 공백으로 변경하고 앞뒤 공백 제거
-  return cleanedContent
-    .replace(/[^a-zA-Z가-힣ㄱ-ㅎㅏ-ㅣ0-9().?!\s]/g, "")
-    .replace(/\s+/g, " ")
-    .trim()
-    .slice(0, 157) // 157자까지만 자르기 (... 3글자 포함하여 160자)
-    .replace(/(.{157})/, "$1..."); // 157자 이상일 경우에만 ... 추가
 }
 
 export async function generateMetadata({
@@ -57,7 +42,7 @@ export async function generateMetadata({
 
   return {
     title: post.title,
-    description: processMarkdown(post.content),
+    description: stripMarkdown(post.content),
   };
 }
 

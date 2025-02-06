@@ -1,11 +1,12 @@
 "use client";
 
-import { use } from "react";
+import { use, useEffect, useRef } from "react";
 
 import Image from "next/image";
 import Link from "next/link";
 
 import { components } from "@/lib/backend/apiV1/schema";
+import MarkdownViewer from "@/lib/business/components/MarkdownViewer";
 import { getDateHr, getFileSizeHr } from "@/lib/business/utils";
 
 import { LoginMemberContext } from "@/stores/auth/loginMember";
@@ -30,7 +31,29 @@ export default function ClientPage({
   post: components["schemas"]["PostWithContentDto"];
   genFiles: components["schemas"]["PostGenFileDto"][];
 }) {
+  const markdownViewerRef = useRef<any>(null); // eslint-disable-line @typescript-eslint/no-explicit-any
   const { loginMember, isAdmin } = use(LoginMemberContext);
+
+  useEffect(() => {
+    const checkAndScrollToElement = () => {
+      const hash = decodeURIComponent(window.location.hash.substring(1));
+      const element = document.getElementById(hash);
+      if (element) {
+        element.scrollIntoView({ behavior: "smooth" });
+        return true; // 엘리먼트를 찾았음
+      }
+      return false; // 엘리먼트를 찾지 못함
+    };
+
+    let attempts = 0;
+    const maxAttempts = 20; // 10초 / 0.5초 = 20회
+    const interval = setInterval(() => {
+      if (checkAndScrollToElement() || attempts >= maxAttempts) {
+        clearInterval(interval); // 엘리먼트를 찾았거나 최대 시도 횟수에 도달하면 중단
+      }
+      attempts++;
+    }, 500);
+  }, []);
 
   return (
     <main className="container mt-2 mx-auto px-2">
@@ -50,6 +73,8 @@ export default function ClientPage({
                 alt={post.authorName}
                 width={40}
                 height={40}
+                quality={100}
+                objectFit="cover"
                 className="rounded-full ring-2 ring-primary/10"
               />
               <div>
@@ -77,7 +102,7 @@ export default function ClientPage({
           </div>
         </CardHeader>
         <CardContent>
-          <div className="whitespace-pre-line">{post.content}</div>
+          <MarkdownViewer ref={markdownViewerRef} initialValue={post.content} />
           <div>
             {post.createDate != post.modifyDate && (
               <p className="text-xs text-muted-foreground">

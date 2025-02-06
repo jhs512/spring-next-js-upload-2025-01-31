@@ -32,6 +32,7 @@ export default function ClientPage() {
               width={80}
               height={80}
               quality={100}
+              objectFit="cover"
               className="rounded-full ring-2 ring-primary/10"
             />
             <div className="text-xl font-medium">{loginMember.nickname}</div>
