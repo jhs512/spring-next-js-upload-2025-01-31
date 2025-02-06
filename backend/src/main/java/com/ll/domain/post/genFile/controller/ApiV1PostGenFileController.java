@@ -15,6 +15,7 @@ import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.lang.NonNull;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.bind.annotation.*;
@@ -32,6 +33,7 @@ import static org.springframework.http.MediaType.MULTIPART_FORM_DATA_VALUE;
 @SecurityRequirement(name = "bearerAuth")
 public class ApiV1PostGenFileController {
     private final PostService postService;
+    private final ApplicationEventPublisher eventPublisher;
     private final Rq rq;
 
     @PostMapping(value = "/{typeCode}", consumes = MULTIPART_FORM_DATA_VALUE)
@@ -158,6 +160,50 @@ public class ApiV1PostGenFileController {
         return new RsData<>(
                 "200-1",
                 "%d번 파일이 수정되었습니다.".formatted(id),
+                new PostGenFileDto(postGenFile)
+        );
+    }
+
+
+    @PutMapping(value = "/{typeCode}/{fileNo}", consumes = MULTIPART_FORM_DATA_VALUE)
+    @Transactional
+    @Operation(summary = "수정")
+    public RsData<PostGenFileDto> modify(
+            @PathVariable long postId,
+            @PathVariable PostGenFile.TypeCode typeCode,
+            @PathVariable int fileNo,
+            @NonNull @RequestPart("file") MultipartFile file,
+            @RequestParam(defaultValue = "") String metaStr
+    ) {
+        if (typeCode == PostGenFile.TypeCode.thumbnail && fileNo > 1) {
+            throw new ServiceException("400-1", "썸네일은 1개만 등록할 수 있습니다.");
+        }
+
+        Post post = postService.findById(postId).orElseThrow(
+                () -> new ServiceException("404-1", "%d번 글은 존재하지 않습니다.".formatted(postId))
+        );
+
+        String filePath = Ut.file.toFile(
+                file,
+                AppConfig.getTempDirPath(),
+                Ut.str.isNotBlank(metaStr) ? metaStr + Ut.file.META_STR_SEPARATOR : ""
+        );
+
+        if (typeCode == PostGenFile.TypeCode.thumbnail && !Ut.file.getFileExtTypeCodeFromFilePath(filePath).equals("img")) {
+            throw new ServiceException("400-2", "썸네일은 이미지 파일만 등록할 수 있습니다.");
+        }
+
+        PostGenFile postGenFile = post.putGenFile(typeCode, fileNo, filePath);
+
+        if (typeCode == PostGenFile.TypeCode.thumbnail) {
+            post.setThumbnailGenFile(postGenFile);
+        }
+
+        postService.flush();
+
+        return new RsData<>(
+                "200-1",
+                "%d번 파일이 수정되었습니다.".formatted(postGenFile.getId()),
                 new PostGenFileDto(postGenFile)
         );
     }

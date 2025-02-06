@@ -1,5 +1,6 @@
 package com.ll.domain.post.post.entity;
 
+import com.ll.domain.base.genFile.genFile.entity.GenFile;
 import com.ll.domain.member.member.entity.Member;
 import com.ll.domain.post.comment.entity.PostComment;
 import com.ll.domain.post.genFile.entity.PostGenFile;
@@ -43,6 +44,9 @@ public class Post extends BaseTime {
     @OneToMany(mappedBy = "post", cascade = {CascadeType.PERSIST, CascadeType.REMOVE}, orphanRemoval = true)
     @Builder.Default
     private List<PostGenFile> genFiles = new ArrayList<>();
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    private PostGenFile thumbnailGenFile;
 
     private boolean published;
 
@@ -137,13 +141,21 @@ public class Post extends BaseTime {
 
     private PostGenFile processGenFile(PostGenFile oldPostGenFile, PostGenFile.TypeCode typeCode, int fileNo, String filePath) {
         boolean isModify = oldPostGenFile != null;
+        String metadataStrFromFileName = Ut.file.getMetadataStrFromFileName(filePath);
         String originalFileName = Ut.file.getOriginalFileName(filePath);
         String fileExt = Ut.file.getFileExt(filePath);
         String fileExtTypeCode = Ut.file.getFileExtTypeCodeFromFileExt(fileExt);
         String fileExtType2Code = Ut.file.getFileExtType2CodeFromFileExt(fileExt);
         String metadataStr = Ut.file.getMetadata(filePath).entrySet().stream()
-                .map(entry -> entry.getKey() + "-" + entry.getValue())
-                .collect(Collectors.joining(";"));
+                .map(entry -> entry.getKey() + "=" + entry.getValue())
+                .collect(Collectors.joining("&"));
+
+        if (Ut.str.isNotBlank(metadataStrFromFileName)) {
+            metadataStr = Ut.str.isNotBlank(metadataStr)
+                    ? metadataStr + "&" + metadataStrFromFileName
+                    : metadataStrFromFileName;
+        }
+
         String fileName = isModify ? Ut.file.withNewExt(oldPostGenFile.getFileName(), fileExt) : UUID.randomUUID() + "." + fileExt;
         int fileSize = Ut.file.getFileSize(filePath);
         fileNo = fileNo == 0 ? getNextGenFileNo(typeCode) : fileNo;
@@ -180,7 +192,7 @@ public class Post extends BaseTime {
 
     private int getNextGenFileNo(PostGenFile.TypeCode typeCode) {
         return genFiles.stream()
-                .filter(genFile -> genFile.getTypeCode().equals(typeCode))
+                .filter(genFile -> genFile.getTypeCode() == typeCode)
                 .mapToInt(PostGenFile::getFileNo)
                 .max()
                 .orElse(0) + 1;
@@ -194,7 +206,7 @@ public class Post extends BaseTime {
 
     public Optional<PostGenFile> getGenFileByTypeCodeAndFileNo(PostGenFile.TypeCode typeCode, int fileNo) {
         return genFiles.stream()
-                .filter(genFile -> genFile.getTypeCode().equals(typeCode))
+                .filter(genFile -> genFile.getTypeCode() == typeCode)
                 .filter(genFile -> genFile.getFileNo() == fileNo)
                 .findFirst();
     }
@@ -209,27 +221,31 @@ public class Post extends BaseTime {
         genFiles.remove(postGenFile);
     }
 
-    public void modifyGenFile(PostGenFile postGenFile, String filePath) {
-        processGenFile(postGenFile, postGenFile.getTypeCode(), postGenFile.getFileNo(), filePath);
+    public PostGenFile modifyGenFile(PostGenFile postGenFile, String filePath) {
+        return processGenFile(postGenFile, postGenFile.getTypeCode(), postGenFile.getFileNo(), filePath);
     }
 
-    public void modifyGenFile(PostGenFile.TypeCode typeCode, int fileNo, String filePath) {
-        getGenFileByTypeCodeAndFileNo(
-                typeCode,
-                fileNo
-        ).ifPresent(postGenFile -> modifyGenFile(postGenFile, filePath));
+    public PostGenFile modifyGenFile(PostGenFile.TypeCode typeCode, int fileNo, String filePath) {
+        return modifyGenFile(
+                getGenFileByTypeCodeAndFileNo(
+                        typeCode,
+                        fileNo
+                )
+                        .get(),
+                filePath
+        );
     }
 
-    public void putGenFile(PostGenFile.TypeCode typeCode, int fileNo, String filePath) {
+    public PostGenFile putGenFile(PostGenFile.TypeCode typeCode, int fileNo, String filePath) {
         Optional<PostGenFile> opPostGenFile = getGenFileByTypeCodeAndFileNo(
                 typeCode,
                 fileNo
         );
 
         if (opPostGenFile.isPresent()) {
-            modifyGenFile(typeCode, fileNo, filePath);
+            return modifyGenFile(typeCode, fileNo, filePath);
         } else {
-            addGenFile(typeCode, fileNo, filePath);
+            return addGenFile(typeCode, fileNo, filePath);
         }
     }
 
@@ -253,5 +269,11 @@ public class Post extends BaseTime {
 
     public boolean isTemp() {
         return !published && "임시글".equals(title);
+    }
+
+    public String getThumbnailImgUrlOrDefault() {
+        return Optional.ofNullable(thumbnailGenFile)
+                .map(GenFile::getPublicUrl)
+                .orElse("https://placehold.co/1200x1200?text=POST " + getId());
     }
 }

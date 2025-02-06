@@ -117,7 +117,7 @@ public class PostService {
                 "임시글"
         ).orElseGet(() -> {
             isNew.set(true);
-            return write(author, "임시글", "", false, false);
+            return write(author, "임시글", "# 요약\n- 이 글은 ...", false, false);
         });
 
         if (isNew.get()) {

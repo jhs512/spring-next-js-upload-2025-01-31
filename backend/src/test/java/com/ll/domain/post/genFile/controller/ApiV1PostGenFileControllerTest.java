@@ -233,7 +233,7 @@ public class ApiV1PostGenFileControllerTest {
     }
 
     @Test
-    @DisplayName("파일 수정")
+    @DisplayName("파일 수정, with id")
     @WithUserDetails("user4")
     void t6() throws Exception {
         PostGenFile postGenFile = postService
@@ -267,22 +267,77 @@ public class ApiV1PostGenFileControllerTest {
                 .andExpect(handler().methodName("modify"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.resultCode").value("200-1"))
-                .andExpect(jsonPath("$.msg").value("1번 파일이 수정되었습니다."))
+                .andExpect(jsonPath("$.msg").value("%d번 파일이 수정되었습니다.".formatted(postGenFile.getId())))
                 .andExpect(jsonPath("$.data.id").value(postGenFile.getId()))
-                .andExpect(jsonPath("$.data.createDate").isString())
-                .andExpect(jsonPath("$.data.modifyDate").isString())
-                .andExpect(jsonPath("$.data.postId").value(9))
+                .andExpect(jsonPath("$.data.createDate").value(Matchers.startsWith(postGenFile.getCreateDate().toString().substring(0, 20))))
+                .andExpect(jsonPath("$.data.modifyDate").value(Matchers.startsWith(postGenFile.getModifyDate().toString().substring(0, 20))))
+                .andExpect(jsonPath("$.data.postId").value(postGenFile.getPost().getId()))
                 .andExpect(jsonPath("$.data.typeCode").value(postGenFile.getTypeCode().name()))
                 .andExpect(jsonPath("$.data.fileExtTypeCode").value(SampleResource.IMG_JPG_SAMPLE1.getFileExtTypeCode()))
                 .andExpect(jsonPath("$.data.fileExtType2Code").value(SampleResource.IMG_JPG_SAMPLE1.getFileExtType2Code()))
-                .andExpect(jsonPath("$.data.fileSize").isNumber())
-                .andExpect(jsonPath("$.data.fileNo").value(1))
+                .andExpect(jsonPath("$.data.fileSize").value(postGenFile.getFileSize()))
+                .andExpect(jsonPath("$.data.fileNo").value(postGenFile.getFileNo()))
                 .andExpect(jsonPath("$.data.fileExt").value(SampleResource.IMG_JPG_SAMPLE1.getFileExt()))
-                .andExpect(jsonPath("$.data.fileDateDir").isString())
+                .andExpect(jsonPath("$.data.fileDateDir").value(postGenFile.getFileDateDir()))
                 .andExpect(jsonPath("$.data.originalFileName").value(SampleResource.IMG_JPG_SAMPLE1.getOriginalFileName()))
-                .andExpect(jsonPath("$.data.downloadUrl").isString())
-                .andExpect(jsonPath("$.data.publicUrl").isString())
-                .andExpect(jsonPath("$.data.fileName").isString());
+                .andExpect(jsonPath("$.data.downloadUrl").value(postGenFile.getDownloadUrl()))
+                .andExpect(jsonPath("$.data.publicUrl").value(postGenFile.getPublicUrl()))
+                .andExpect(jsonPath("$.data.fileName").value(postGenFile.getFileName()));
+
+        Ut.file.mv(copyFilePath, originFilePath);
+    }
+
+    @Test
+    @DisplayName("파일 수정, with typeCode And fileNo")
+    @WithUserDetails("user4")
+    void t7() throws Exception {
+        PostGenFile postGenFile = postService
+                .findById(9).get().getGenFileByTypeCodeAndFileNo(PostGenFile.TypeCode.thumbnail, 1).get();
+
+        String originFilePath = postGenFile.getFilePath();
+        String copyFilePath = AppConfig.getTempDirPath() + "/copy_" + postGenFile.getFileName();
+        Ut.file.copy(originFilePath, copyFilePath);
+
+        String newFilePath = SampleResource.IMG_JPG_SAMPLE1.makeCopy();
+
+        ResultActions resultActions = mvc
+                .perform(
+                        multipart("/api/v1/posts/9/genFiles/" + PostGenFile.TypeCode.thumbnail + "/1")
+                                .file(new MockMultipartFile(
+                                        "file",
+                                        SampleResource.IMG_JPG_SAMPLE1.getOriginalFileName(),
+                                        SampleResource.IMG_JPG_SAMPLE1.getContentType(),
+                                        new FileInputStream(newFilePath))
+                                )
+                                .with(request -> {
+                                    request.setMethod("PUT");
+                                    return request;
+                                })
+
+                )
+                .andDo(print());
+
+        resultActions
+                .andExpect(handler().handlerType(ApiV1PostGenFileController.class))
+                .andExpect(handler().methodName("modify"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.resultCode").value("200-1"))
+                .andExpect(jsonPath("$.msg").value("%d번 파일이 수정되었습니다.".formatted(postGenFile.getId())))
+                .andExpect(jsonPath("$.data.id").value(postGenFile.getId()))
+                .andExpect(jsonPath("$.data.createDate").value(Matchers.startsWith(postGenFile.getCreateDate().toString().substring(0, 20))))
+                .andExpect(jsonPath("$.data.modifyDate").value(Matchers.startsWith(postGenFile.getModifyDate().toString().substring(0, 20))))
+                .andExpect(jsonPath("$.data.postId").value(postGenFile.getPost().getId()))
+                .andExpect(jsonPath("$.data.typeCode").value(postGenFile.getTypeCode().name()))
+                .andExpect(jsonPath("$.data.fileExtTypeCode").value(SampleResource.IMG_JPG_SAMPLE1.getFileExtTypeCode()))
+                .andExpect(jsonPath("$.data.fileExtType2Code").value(SampleResource.IMG_JPG_SAMPLE1.getFileExtType2Code()))
+                .andExpect(jsonPath("$.data.fileSize").value(postGenFile.getFileSize()))
+                .andExpect(jsonPath("$.data.fileNo").value(postGenFile.getFileNo()))
+                .andExpect(jsonPath("$.data.fileExt").value(SampleResource.IMG_JPG_SAMPLE1.getFileExt()))
+                .andExpect(jsonPath("$.data.fileDateDir").value(postGenFile.getFileDateDir()))
+                .andExpect(jsonPath("$.data.originalFileName").value(SampleResource.IMG_JPG_SAMPLE1.getOriginalFileName()))
+                .andExpect(jsonPath("$.data.downloadUrl").value(postGenFile.getDownloadUrl()))
+                .andExpect(jsonPath("$.data.publicUrl").value(postGenFile.getPublicUrl()))
+                .andExpect(jsonPath("$.data.fileName").value(postGenFile.getFileName()));
 
         Ut.file.mv(copyFilePath, originFilePath);
     }

@@ -180,8 +180,10 @@ public class BaseInitData {
         String genFile3FilePath = SampleResource.IMG_JPG_SAMPLE3.makeCopy();
         post9.addGenFile(PostGenFile.TypeCode.thumbnail, genFile3FilePath);
 
-        String newGenFile3FilePath = SampleResource.IMG_JPG_SAMPLE4.makeCopy();
-        post9.modifyGenFile(PostGenFile.TypeCode.thumbnail, 1, newGenFile3FilePath);
+        String newGenFile3FilePath = SampleResource.IMG_JPG_SAMPLE5.makeCopy();
+        PostGenFile postGenFile3 = post9.modifyGenFile(PostGenFile.TypeCode.thumbnail, 1, newGenFile3FilePath);
+
+        post9.setThumbnailGenFile(postGenFile3);
 
         Post post10 = postService.write(
                 memberUser4,

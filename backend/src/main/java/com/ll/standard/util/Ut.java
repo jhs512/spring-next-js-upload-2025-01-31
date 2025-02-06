@@ -35,6 +35,10 @@ public class Ut {
         public static String lcfirst(String str) {
             return Character.toLowerCase(str.charAt(0)) + str.substring(1);
         }
+
+        public static boolean isNotBlank(String str) {
+            return str != null && !str.isBlank();
+        }
     }
 
     public static class json {
@@ -96,6 +100,8 @@ public class Ut {
     }
 
     public static class file {
+
+        public static final String META_STR_SEPARATOR = "--metaStr_";
         private static final String ORIGINAL_FILE_NAME_SEPARATOR = "--originalFileName_";
 
         private static final Map<String, String> MIME_TYPE_MAP = new LinkedHashMap<>() {{
@@ -282,6 +288,12 @@ public class Ut {
             };
         }
 
+        public static String getFileExtTypeCodeFromFilePath(String filePath) {
+            String ext = getFileExt(filePath);
+
+            return getFileExtTypeCodeFromFileExt(ext);
+        }
+
         public static String getFileExtType2CodeFromFileExt(String ext) {
             return switch (ext) {
                 case "jpeg", "jpg" -> "jpg";
@@ -326,16 +338,21 @@ public class Ut {
         }
 
         @SneakyThrows
-        public static String toFile(MultipartFile multipartFile, String dirPath) {
+        public static String toFile(MultipartFile multipartFile, String dirPath, String prefix) {
             if (multipartFile == null) return "";
             if (multipartFile.isEmpty()) return "";
 
-            String filePath = dirPath + "/" + UUID.randomUUID() + ORIGINAL_FILE_NAME_SEPARATOR + multipartFile.getOriginalFilename();
+            String filePath = dirPath + "/" + prefix + UUID.randomUUID() + ORIGINAL_FILE_NAME_SEPARATOR + multipartFile.getOriginalFilename();
 
             Ut.file.mkdir(dirPath);
             multipartFile.transferTo(new File(filePath));
 
             return filePath;
+        }
+
+        @SneakyThrows
+        public static String toFile(MultipartFile multipartFile, String dirPath) {
+            return toFile(multipartFile, dirPath, "");
         }
 
         @SneakyThrows
@@ -362,6 +379,14 @@ public class Ut {
             return fileName.contains(".")
                     ? fileName.substring(0, fileName.lastIndexOf('.') + 1) + fileExt
                     : fileName + "." + fileExt;
+        }
+
+        public static String getMetadataStrFromFileName(String filePath) {
+            String fileName = Path.of(filePath).getFileName().toString();
+
+            return fileName.contains(META_STR_SEPARATOR)
+                    ? fileName.substring(0, fileName.indexOf(META_STR_SEPARATOR))
+                    : "";
         }
     }
 
